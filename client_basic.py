@@ -3,23 +3,23 @@ import argparse
 import time
 import json
 from messages import IAMAT, WHATSAT
-from evaluate import evaluate_json, evaluate_info
+from evaluate import evaluate_json, evaluate_info, evaluate_error
 import pandas as pd
 import os
 import sys
 
 
 '''
-communicate (['Hill', 'Jaquez', 'Smith', 'Campbell', 'Singleton'])
-0 1 1 0 0
+communicate (['Juzang', 'Bernard', 'Jaquez', 'Johnson', 'Clark'])
+0 1 0 1 1
+1 0 1 1 0
 0 1 0 0 1
-0 0 0 1 1
-0 0 1 0 1
-0 1 1 1 0
+1 1 0 0 0
+1 0 1 0 0
 '''
 
 TIMEOUT_MSG = "TIMEOUT"
-PYTHON_VER = "3.8" # "3.7"
+PYTHON_VER = "3.10"
 
 class SuperClient:
     def __init__(self, host='127.0.0.1', message_max_length=1e6, timeout=None):
@@ -34,11 +34,11 @@ class SuperClient:
     def set_server_info(self, port_dict, server_dir):
         self.port_dict = port_dict
         self.port2server = dict(zip(port_dict.values(), port_dict.keys()))
-        self.Hill = port_dict['Hill']
+        self.Juzang = port_dict['Juzang']
+        self.Bernard = port_dict['Bernard']
         self.Jaquez = port_dict['Jaquez']
-        self.Smith = port_dict['Smith']
-        self.Campbell = port_dict['Campbell']
-        self.Singleton = port_dict['Singleton']
+        self.Johnson = port_dict['Johnson']
+        self.Clark = port_dict['Clark']
         self.server = os.path.join(server_dir, "server.py")
 
     async def start_server(self, server_name):
@@ -86,7 +86,7 @@ class SuperClient:
         writer.write_eof()
         # read
         if self.timeout is None:
-            data =  await reader.read(self.message_max_length)
+            data = await reader.read(self.message_max_length)
         else:
             read_func = reader.read(self.message_max_length)
             try:
@@ -133,15 +133,54 @@ class SuperClient:
         # start the loop
         data = self.loop.run_until_complete(self.whatsat(port, clientName, radius, maxItems))
         first_line = data.split('\n')[0]
-        json_part = json.loads(data[len(first_line):]) if first_line.strip()[0] != "?" else dict()
-        first_line = first_line.strip()
-        return first_line, json_part
+        try:
+            json_part = json.loads(data[len(first_line):]) if first_line.strip()[0] != "?" else dict()
+            first_line = first_line.strip()
+            return first_line, json_part
+        except:
+            return "CRUSH", dict()
 
     def safe_run_whatsat(self, *args):
         try:
             return self.run_whatsat(*args)
         except:
             return "CRUSH", dict()
+
+    async def errormsg(self, port, message):
+        try:
+            reader, writer = await asyncio.open_connection(self.host, port)
+            # write
+            writer.write(str(message).encode())
+            await writer.drain()
+            writer.write_eof()
+            # read
+            if self.timeout is None:
+                data =  await reader.read(self.message_max_length)
+            else:
+                read_func = reader.read(self.message_max_length)
+                try:
+                    data = await asyncio.wait_for(read_func, timeout=self.timeout)
+                except asyncio.TimeoutError:
+                    writer.close()
+                    print("TIME OUT")
+                    return TIMEOUT_MSG
+            writer.close()
+            return data.decode()
+        except:
+            return "CRUSH"
+
+    def run_errormsg(self, port, message):
+        try:
+            data = self.loop.run_until_complete(self.errormsg(port, message))
+            return data
+        except:
+            return "CRUSH"
+
+    def safe_run_errormsg(self, *args):
+        try:
+            return self.run_errormsg(*args)
+        except:
+            return "CRUSH"
 
     def run_crazy(self, port, crazy_info):
         data = self.loop.run_until_complete(self.crazy(port, crazy_info))
@@ -163,30 +202,79 @@ class SuperClient:
         for server_name in all_servers:
             self.run_endserver(server_name)
             # similarly, self.run_startserver(server_name) could be used to start a single server
-        # start the servers
+        sleep(1)
+
+        # test 1 basic: send iamat to juzang, test if all servers can respond to whatsat correctly
+        print ("===============")
+        print ("Test 1")
         self.start_all_servers()
-        # basic test
-        data = self.run_iamat(self.Hill, "client", 34.068930, -118.445127)
-        print(evaluate_info(data, self.port2server[self.Hill], "client", 34.068930, -118.445127))
-        first_line, json_part = self.run_whatsat(self.Hill, "client", 10, 5)
-        print(evaluate_info(first_line, self.port2server[self.Hill], "client", 34.068930, -118.445127))
-        print(evaluate_json(json_part, 5))
-        first_line, json_part = self.run_whatsat(self.Jaquez, "client", 10, 5)
-        print(evaluate_info(first_line, self.port2server[self.Hill], "client", 34.068930, -118.445127))
-        print(evaluate_json(json_part, 5))
-        self.loop.close()
-        # terminate the servers
+        data = self.safe_run_iamat(self.Juzang, "client", 34.068931, -118.445127)
+        print(evaluate_info(data, self.port2server[self.Juzang], "client", 34.068931, -118.445127))
+        first_line, json_part = self.safe_run_whatsat(self.Juzang, "client", 10, 5)
+        sleep(1)
+        # any other server can respond with correct info
+        for test_target in [self.Bernard, self.Jaquez, self.Johnson, self.Clark]:
+            first_line, json_part = self.run_whatsat(test_target, "client", 10, 5)
+            print(evaluate_info(first_line, self.port2server[self.Juzang], "client", 34.068931, -118.445127))
+            print(evaluate_json(json_part, 5))
+        self.end_all_servers()
+
+
+        # test 2 for flooding: kill a server, test if all other servers can still respond correctly
+        print ("===============")
+        print ("Test 2")
+        self.start_all_servers()
+        test_case = {
+            "client": "client_test",
+            "latitude": +34.068930,
+            "longitude": -118.445127,
+            "latitude2": +34.068940,
+            "longitude2": -119.445127,
+            "radius": 10,
+            "max_item": 5
+        }
+
+        data = self.safe_run_iamat(self.Johnson, test_case["client"], test_case["latitude"], test_case["longitude"])
+
+        # terminate Juzang and Bernard; now Clark and Jaquez are connected, but Johnson is not
+        self.run_endserver(self.Juzang)
+        self.run_endserver(self.Bernard)
+        data = self.safe_run_iamat(self.Clark, test_case["client"], test_case["latitude2"], test_case["longitude2"])
+        sleep(0.5)
+
+        # the record at Jaquez should be the latest copy from Clark
+        first_line, json_part = self.safe_run_whatsat(self.Jaquez, test_case["client"], test_case["radius"], test_case["max_item"])
+        print(evaluate_info(first_line, self.port2server[self.Clark], "client", test_case["latitude2"], test_case["longitude2"]))
+        print(evaluate_json(json_part, test_case["max_item"]))
+
+        # the record at Johnson should be its old copy, as it does not connect to Clark
+        first_line, json_part = self.safe_run_whatsat(self.Jaquez, test_case["client"], test_case["radius"], test_case["max_item"])
+        print(evaluate_info(first_line, self.port2server[self.Johnson], "client", test_case["latitude"], test_case["longitude"]))
+        print(evaluate_json(json_part, test_case["max_item"]))
+        sleep(1)
+
+        # test 3 for exception: check if an invalid message can be correctly responded
+        print ("===============")
+        print ("Test 3")
+        self.start_all_servers()
+        messages = ["IAMAT Clark +12-118", "IAMAT Clark +12-118 160000 123", "AS Clark +0.25 testuser +12-118 1234"]
+        total_tests = len(messages)
+        total_correct = 0
+        for message in messages:
+            response_message = self.safe_run_errormsg(self.Clark, message).strip()
+            print (message, response_message)
+            print(evaluate_error(message, response_message))
         self.end_all_servers()
 
 if __name__ == '__main__':
     TIMEOUT = 20
     # an example of the ports
-    port_dict = {
-        'Hill': 8000,
-        'Jaquez': 8001,
-        'Smith': 8002,
-        'Campbell': 8003,
-        'Singleton': 8004
+    port_assignment = {
+        'Juzang': 9991,
+        'Bernard': 9992,
+        'Jaquez': 9993,
+        'Johnson': 9994,
+        'Clark': 9995
     }
     server_dir = "./sample_submission" # the place where we can find server.py
 

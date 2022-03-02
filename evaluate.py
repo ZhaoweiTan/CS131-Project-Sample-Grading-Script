@@ -86,3 +86,9 @@ def compare_lists(list1, list2):
             list2.pop(list2.index(elem))
     return tuple(match)
 
+def evaluate_error(error_msg, res_msg):
+    if (res_msg == "? " + error_msg):
+        return "Correct return error message for", error_msg
+    else:
+        return "Incorrect return error message for", error_msg
+
