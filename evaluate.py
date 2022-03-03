@@ -87,8 +87,4 @@ def compare_lists(list1, list2):
     return tuple(match)
 
 def evaluate_error(error_msg, res_msg):
-    if (res_msg == "? " + error_msg):
-        return "Correct return error message for", error_msg
-    else:
-        return "Incorrect return error message for", error_msg
-
+    return res_msg == ("? " + error_msg)
