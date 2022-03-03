@@ -58,7 +58,7 @@ class SuperClient:
             os.system('lsof -ti:{} | xargs kill'.format(port))
 
     async def crazy(self, port, message):
-        reader, writer = await asyncio.open_connection(self.host, port, loop=self.loop)
+        reader, writer = await asyncio.open_connection(self.host, port)
         # write
         writer.write(str(message).encode())
         await writer.drain()
@@ -79,7 +79,7 @@ class SuperClient:
 
     async def iamat(self, port, clientName, longitude, latitude):
         message = IAMAT(clientName, longitude, latitude, time.time())
-        reader, writer = await asyncio.open_connection(self.host, port, loop=self.loop)
+        reader, writer = await asyncio.open_connection(self.host, port)
         # write
         writer.write(str(message).encode())
         await writer.drain()
@@ -100,14 +100,14 @@ class SuperClient:
 
     async def whatsat(self, port, clientName, radius, maxItems):
         message = WHATSAT(clientName, radius, maxItems)
-        reader, writer = await asyncio.open_connection(self.host, port, loop=self.loop)
+        reader, writer = await asyncio.open_connection(self.host, port)
         # write
         writer.write(str(message).encode())
         await writer.drain()
         writer.write_eof()
         # read
         if self.timeout is None:
-            data =  await reader.read(self.message_max_length)
+            data = await reader.read(self.message_max_length)
         else:
             read_func = reader.read(self.message_max_length)
             try:
@@ -202,7 +202,6 @@ class SuperClient:
         for server_name in all_servers:
             self.run_endserver(server_name)
             # similarly, self.run_startserver(server_name) could be used to start a single server
-        sleep(1)
 
         # test 1 basic: send iamat to juzang, test if all servers can respond to whatsat correctly
         print ("===============")
@@ -211,10 +210,9 @@ class SuperClient:
         data = self.safe_run_iamat(self.Juzang, "client", 34.068931, -118.445127)
         print(evaluate_info(data, self.port2server[self.Juzang], "client", 34.068931, -118.445127))
         first_line, json_part = self.safe_run_whatsat(self.Juzang, "client", 10, 5)
-        sleep(1)
         # any other server can respond with correct info
         for test_target in [self.Bernard, self.Jaquez, self.Johnson, self.Clark]:
-            first_line, json_part = self.run_whatsat(test_target, "client", 10, 5)
+            first_line, json_part = self.safe_run_whatsat(test_target, "client", 10, 5)
             print(evaluate_info(first_line, self.port2server[self.Juzang], "client", 34.068931, -118.445127))
             print(evaluate_json(json_part, 5))
         self.end_all_servers()
@@ -237,10 +235,9 @@ class SuperClient:
         data = self.safe_run_iamat(self.Johnson, test_case["client"], test_case["latitude"], test_case["longitude"])
 
         # terminate Juzang and Bernard; now Clark and Jaquez are connected, but Johnson is not
-        self.run_endserver(self.Juzang)
-        self.run_endserver(self.Bernard)
+        self.run_endserver("Juzang")
+        self.run_endserver("Bernard")
         data = self.safe_run_iamat(self.Clark, test_case["client"], test_case["latitude2"], test_case["longitude2"])
-        sleep(0.5)
 
         # the record at Jaquez should be the latest copy from Clark
         first_line, json_part = self.safe_run_whatsat(self.Jaquez, test_case["client"], test_case["radius"], test_case["max_item"])
@@ -251,7 +248,7 @@ class SuperClient:
         first_line, json_part = self.safe_run_whatsat(self.Jaquez, test_case["client"], test_case["radius"], test_case["max_item"])
         print(evaluate_info(first_line, self.port2server[self.Johnson], "client", test_case["latitude"], test_case["longitude"]))
         print(evaluate_json(json_part, test_case["max_item"]))
-        sleep(1)
+        self.end_all_servers()
 
         # test 3 for exception: check if an invalid message can be correctly responded
         print ("===============")
@@ -281,11 +278,5 @@ if __name__ == '__main__':
     sys.path.append(server_dir) # this is in case we have other files to import from there
 
     client = SuperClient(timeout=TIMEOUT) # using the default settings
-    client.set_server_info(port_dict, server_dir)
+    client.set_server_info(port_assignment, server_dir)
     client.test()
-    
-    
-    
-    
-
-
