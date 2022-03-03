@@ -259,7 +259,6 @@ class SuperClient:
         total_correct = 0
         for message in messages:
             response_message = self.safe_run_errormsg(self.Clark, message).strip()
-            print (message, response_message)
             print(evaluate_error(message, response_message))
         self.end_all_servers()
 

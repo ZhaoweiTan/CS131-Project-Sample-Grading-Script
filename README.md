@@ -21,8 +21,7 @@
     ```shell
     python3 client_basic.py
     ```
-* Tested on both mac and linux; has not tested it on Windows
-* 
+* This script has been tested on both mac and linux; not tested on Windows
 
 ## Resource and Acknowledgement
 - Thanks to previous-year TA, Wenhao and Patricia's code
