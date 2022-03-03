@@ -7,6 +7,8 @@ def parse_float(full_string):
     return re.findall(r"[-+]?\d*\.\d+|\d+", full_string)
 
 def evaluate_json(json_data, len_results=0):
+    if (json_data == "CRUSH"):
+        return False, False, False
     if isinstance(json_data, list):
         # contains only the place info
         json_data = {"results": json_data}
@@ -17,6 +19,8 @@ def evaluate_json(json_data, len_results=0):
     return format_correct, result_valid, result_length_correct
 
 def evaluate_info(feedback_string, expected_server, expected_client, expected_lat, expected_lng):
+    if (feedback_string == "CRUSH"):
+        return False, False, False
     feedback_elem = [e for e in feedback_string.split() if len(e) > 0]
     correct_length = len(feedback_elem) == 6
     location = correct_length and parse_float(feedback_elem[4])

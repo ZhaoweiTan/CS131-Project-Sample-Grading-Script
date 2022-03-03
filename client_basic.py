@@ -138,13 +138,13 @@ class SuperClient:
             first_line = first_line.strip()
             return first_line, json_part
         except:
-            return "CRUSH", dict()
+            return "CRUSH", "CRUSH"
 
     def safe_run_whatsat(self, *args):
         try:
             return self.run_whatsat(*args)
         except:
-            return "CRUSH", dict()
+            return "CRUSH", "CRUSH"
 
     async def errormsg(self, port, message):
         try:

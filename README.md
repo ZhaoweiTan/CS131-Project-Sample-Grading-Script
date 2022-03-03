@@ -21,6 +21,8 @@
     ```shell
     python3 client_basic.py
     ```
+* If your program runs correctly, your are expected to see only "True" in the output, without any "False".
+* Ignore all those output messages, such as "nohup" and "kill" related.
 * This script has been tested on both mac and linux; not tested on Windows
 
 ## Resource and Acknowledgement
