@@ -21,7 +21,7 @@
     ```shell
     python3 client_basic.py
     ```
-* If your program runs correctly, your are expected to see only "True" in the output, without any "False".
+* If your program runs correctly, your are expected to see only "True" in the output (3x9 test points for test 1, 3x4 test points for test 2, 3 test points for test 3), without any "False".
 * Ignore all those output messages, such as "nohup" and "kill" related.
 * This script has been tested on both mac and linux; not tested on Windows
 
