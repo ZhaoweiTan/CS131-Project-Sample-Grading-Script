@@ -241,12 +241,12 @@ class SuperClient:
 
         # the record at Jaquez should be the latest copy from Clark
         first_line, json_part = self.safe_run_whatsat(self.Jaquez, test_case["client"], test_case["radius"], test_case["max_item"])
-        print(evaluate_info(first_line, self.port2server[self.Clark], "client", test_case["latitude2"], test_case["longitude2"]))
+        print(evaluate_info(first_line, self.port2server[self.Clark], test_case["client"], test_case["latitude2"], test_case["longitude2"]))
         print(evaluate_json(json_part, test_case["max_item"]))
 
         # the record at Johnson should be its old copy, as it does not connect to Clark
-        first_line, json_part = self.safe_run_whatsat(self.Jaquez, test_case["client"], test_case["radius"], test_case["max_item"])
-        print(evaluate_info(first_line, self.port2server[self.Johnson], "client", test_case["latitude"], test_case["longitude"]))
+        first_line, json_part = self.safe_run_whatsat(self.Johnson, test_case["client"], test_case["radius"], test_case["max_item"])
+        print(evaluate_info(first_line, self.port2server[self.Johnson], test_case["client"], test_case["latitude"], test_case["longitude"]))
         print(evaluate_json(json_part, test_case["max_item"]))
         self.end_all_servers()
 
